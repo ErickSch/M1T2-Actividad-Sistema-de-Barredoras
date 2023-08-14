@@ -77,7 +77,6 @@ class Habitacion(Model):
                  modo_pos_inicial: str = 'Fija',
                  ):
 
-# esto es un comentario!!!
         self.num_agentes = num_agentes
         self.porc_celdas_sucias = porc_celdas_sucias
         self.porc_muebles = porc_muebles
