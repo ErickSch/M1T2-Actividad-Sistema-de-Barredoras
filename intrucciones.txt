@@ -1,0 +1,10 @@
+- Colocar, al menos, una estación de carga por cada (M x N)/4 celdas.
+
+- Reprogramar cada robot para que incrementen su eficiencia y no malgasten su 
+    batería realizando movimiento innecesarios.
+
+- Ten en cuenta que los robots no se comunican entre sí (no está en su programa actual),
+    pero tienen un excelente módulo ZigBee que les permite realizar esta tarea.
+
+- Define un umbral para evitar la descarga completa: Recuerda que si un robot llega 
+    a cero (0), éste no se moverá por su cuenta.
