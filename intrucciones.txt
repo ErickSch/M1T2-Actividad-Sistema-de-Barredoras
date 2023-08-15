@@ -8,3 +8,22 @@
 
 - Define un umbral para evitar la descarga completa: Recuerda que si un robot llega 
     a cero (0), éste no se moverá por su cuenta.
+
+
+
+.................................................................................
+Observando el datasheet de las baterías y los cargadores, sabes que a los robots
+les toma dos (2) unidades de tiempo (steps) por un 50% de carga. 
+
+
+Ahora bien, una vez realizada la implementación, Doña Martha, quien en realidad es 
+Ingeniera en Robótica y Especialista en Sistemas Autónomos, desea leer tu informe 
+técnico. Éste debe tener lo siguiente:
+
+- Tiempo necesario hasta que todas las celdas estén limpias.
+- Número de movimientos realizados por todos los agentes.
+- Cantidad de recargas completas, directamente relacionadas con el consumo de energía 
+  eléctrica.
+- Incluye el diagrama de tu máquina de estados del agente.
+- Analiza cómo la cantidad de agentes impacta el tiempo dedicado y el consumo 
+  energético que esto implica.

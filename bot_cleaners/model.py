@@ -17,6 +17,10 @@ class Mueble(Agent):
     def __init__(self, unique_id, model):
         super().__init__(unique_id, model)
 
+class EstacionDeCarga(Agent):
+    def __init__(self, unique_id, model):
+        super().__init__(unique_id, model)
+        self.ocupada = False
 
 class RobotLimpieza(Agent):
     def __init__(self, unique_id, model):
@@ -33,6 +37,8 @@ class RobotLimpieza(Agent):
     def seleccionar_nueva_pos(self, lista_de_vecinos):
         self.sig_pos = self.random.choice(lista_de_vecinos).pos
 
+
+    # Hace el metodo publico
     @staticmethod
     def buscar_celdas_sucia(lista_de_vecinos):
         # #Opción 1
@@ -50,7 +56,7 @@ class RobotLimpieza(Agent):
             self.pos, moore=True, include_center=False)
 
         for vecino in vecinos:
-            if isinstance(vecino, (Mueble, RobotLimpieza)):
+            if isinstance(vecino, (Mueble, RobotLimpieza, EstacionDeCarga)):
                 vecinos.remove(vecino)
 
         celdas_sucias = self.buscar_celdas_sucia(vecinos)
@@ -86,11 +92,19 @@ class Habitacion(Model):
 
         posiciones_disponibles = [pos for _, pos in self.grid.coord_iter()]
 
+        # Posicionamiento de estaciones de carga
+        posiciones_estaciones_carga = [(1, 1), (1, M-2), (N-2, 1), (M-2, N-2)]
+        for id, pos in enumerate(posiciones_estaciones_carga):
+            estacion = EstacionDeCarga(id+1, self)
+            self.grid.place_agent(estacion, pos)
+            posiciones_disponibles.remove(pos)
+
         # Posicionamiento de muebles
         num_muebles = int(M * N * porc_muebles)
         posiciones_muebles = self.random.sample(posiciones_disponibles, k=num_muebles)
 
         for id, pos in enumerate(posiciones_muebles):
+            # print(pos)
             mueble = Mueble(int(f"{num_agentes}0{id}") + 1, self)
             self.grid.place_agent(mueble, pos)
             posiciones_disponibles.remove(pos)
