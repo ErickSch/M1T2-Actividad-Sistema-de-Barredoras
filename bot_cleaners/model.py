@@ -24,10 +24,11 @@ class EstacionDeCarga(Agent):
 
 class RobotLimpieza(Agent):
     celdas_limpias = []
-    def __init__(self, unique_id, model):
+    def __init__(self, unique_id, model, mueblesPos):
         super().__init__(unique_id, model)
+        self.mueblesPos = mueblesPos
         self.sig_pos = None
-        self.movimientos = 0
+        self.movimientos = list()
         self.carga = 100
 
     def limpiar_una_celda(self, lista_de_celdas_sucias):
@@ -38,7 +39,12 @@ class RobotLimpieza(Agent):
         print(RobotLimpieza.celdas_limpias)
 
     def seleccionar_nueva_pos(self, lista_de_vecinos):
-        self.sig_pos = self.random.choice(lista_de_vecinos).pos
+        while True:
+            #Checa si la siguiente posicion es un mueble para poderse mover
+            #sin checar
+            self.sig_pos = self.random.choice(lista_de_vecinos).pos
+            if self.sig_pos not in self.mueblesPos:
+                break
 
     # def get_nearest_station(self, pos):
     #     posiciones_estaciones_carga = [(1, 1), (1, self.model.M-2), (N-2, 1), (M-2, N-2)]
@@ -81,8 +87,8 @@ class RobotLimpieza(Agent):
 
     def advance(self):
         if self.pos != self.sig_pos:
-            self.movimientos += 1
-
+            self.movimientos.append(self.sig_pos)
+            
         if self.carga > 0:
             self.carga -= 1
             self.model.grid.move_agent(self, self.sig_pos)
@@ -116,6 +122,8 @@ class Habitacion(Model):
         # Posicionamiento de muebles
         num_muebles = int(M * N * porc_muebles)
         posiciones_muebles = self.random.sample(posiciones_disponibles, k=num_muebles)
+        
+        mueblesPos = posiciones_muebles.copy()
 
         for id, pos in enumerate(posiciones_muebles):
             # print(pos)
@@ -140,7 +148,7 @@ class Habitacion(Model):
             pos_inicial_robots = [(1, 1)] * num_agentes
 
         for id in range(num_agentes):
-            robot = RobotLimpieza(id, self)
+            robot = RobotLimpieza(id, self, mueblesPos)
             self.grid.place_agent(robot, pos_inicial_robots[id])
             self.schedule.add(robot)
 
