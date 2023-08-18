@@ -229,8 +229,8 @@ def get_movimientos(agent: Agent) -> dict:
         return {agent.unique_id: agent.movimientos}
     # else:
     #    return 0(self, unique_id, model, suciedad: bool = False):
-        super().__init__(unique_id, model)
-        self.sucia = suciedad
+        # super().__init__(unique_id, model)
+        # self.sucia = suciedad
 
 
 class Mueble(Agent):
@@ -273,7 +273,6 @@ class RobotLimpieza(Agent):
         celda_a_limpiar.sucia = False
         self.sig_pos = celda_a_limpiar.pos
         RobotLimpieza.celdas_limpias.append(celda_a_limpiar.pos)
-        print(RobotLimpieza.celdas_limpias)
 
     def seleccionar_nueva_pos(self, lista_de_vecinos):
         while True:
@@ -312,7 +311,7 @@ class RobotLimpieza(Agent):
             self.pos, moore=True, include_center=False)
 
         for vecino in vecinos:
-            if isinstance(vecino, (Mueble, RobotLimpieza, EstacionDeCarga)) and vecino in RobotLimpieza.celdas_limpias:
+            if isinstance(vecino, (Mueble, RobotLimpieza, EstacionDeCarga)) or vecino in RobotLimpieza.celdas_limpias:
                 vecinos.remove(vecino)
 
         celdas_sucias = self.buscar_celdas_sucia(vecinos)
