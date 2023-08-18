@@ -140,16 +140,30 @@ class Habitacion(Model):
         posiciones_disponibles = [pos for _, pos in self.grid.coord_iter()]
         
         # Posicionamiento de estaciones de carga
-        posiciones_estaciones_carga = [(M/4, N/4), ((M/4)+1, N/4), (M/4, (N/4)+1), ((M/4)+1, (N/4)+1),
-                                        (M/4, (N/4)*3), ((M/4)+1, (N/4)*3), (M/4, ((N/4)*3)+1), ((M/4)+1, ((N/4)*3)+1),
-                                        ((M/4)*3, N/4), (((M/4)*3)+1, N/4), ((M/4)*3, (N/4)+1), (((M/4)*3)+1, (N/4)+1),
-                                        ((M/4)*3, (N/4)*3), (((M/4)*3)+1, (N/4)*3), ((M/4)*3, ((N/4)*3)+1), (((M/4)*3)+1, ((N/4)*3)+1)
+        #Cuadrnte 1
+        # (M//4, N//4) = (5, 5)
 
-                                       ]
+        #Cuadrante 2
+        # (M//4, N*3//4) = (5, 15)
+
+        #Cuadrante 3
+        # (M*3//4, N//4) = (15, 5)
+
+        #Cuadrante 4
+        # (M*3//4, N*3//4) = (15, 15)
+
+
+        posiciones_estaciones_carga = [(M//4, N//4),
+                                       (M//4, N*3//4),
+                                       (M*3//4, N//4),
+                                       (M*3//4, N*3//4)]
         for id, pos in enumerate(posiciones_estaciones_carga):
             estacion = EstacionDeCarga(id+1, self)
             self.grid.place_agent(estacion, pos)
             posiciones_disponibles.remove(pos)
+            #Fix the problem
+            # 
+
 
         # Posicionamiento de muebles
         num_muebles = int(M * N * porc_muebles)
