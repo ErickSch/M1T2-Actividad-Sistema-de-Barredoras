@@ -18,9 +18,13 @@ class Mueble(Agent):
         super().__init__(unique_id, model)
 
 class EstacionDeCarga(Agent):
+    posiciones = []
     def __init__(self, unique_id, model):
         super().__init__(unique_id, model)
         self.ocupada = False
+        if len(EstacionDeCarga.posiciones) <= unique_id:
+            EstacionDeCarga.posiciones.append(self.pos)
+        print(EstacionDeCarga.posiciones)
 
         #AGB sin probar
     def recargar(self):
@@ -52,7 +56,14 @@ class RobotLimpieza(Agent):
         for agent in agent:
             if isinstance(agent, agent_type):
                 return agent
-        return None    
+        return None 
+
+    # def carga_cercana(self):
+
+        # Tu -> Subir posicion
+        # Otros -> Aceptar los que esten cerca
+        # Tu -> Agarrar al mas cercano
+        # 
 
     def limpiar_una_celda(self, lista_de_celdas_sucias):
         
@@ -62,18 +73,24 @@ class RobotLimpieza(Agent):
         RobotLimpieza.celdas_limpias.append(celda_a_limpiar.pos)
         # print(RobotLimpieza.celdas_limpias)
 
+    def dirigirse(self, pos_final, lista_de_vecinos):
+        distancias_vecinos = []
+        for i in range(len(lista_de_vecinos)):
+            # Que no sea mueble ni este en celdas limpias
+            if isinstance(lista_de_vecinos[i], Mueble) != True and lista_de_vecinos[i] not in self.movimientos:
+                distancias_vecinos.append((i, self.get_distance(lista_de_vecinos[i].pos, pos_final)))
+
+        index_min_distancia = min(distancias_vecinos, key=lambda x: x[1])[0]
+        min_distancia = lista_de_vecinos[index_min_distancia]
+        self.sig_pos = min_distancia.pos
+
     def seleccionar_nueva_pos(self, lista_de_vecinos):
         if self.pos == self.recorrido[0]:
             self.recorrido.pop(0)
-            self.sig_pos = self.recorrido[0]
+            if isinstance(self.recorrido[0], Mueble):
+                self.sig_pos = self.recorrido[0]
         else:
-            distancias_vecinos = []
-            for i in lista_de_vecinos:
-                distancias_vecinos.append(self.get_distance(self.recorrido[0], i.pos))
-                
-            index_min_distancia = distancias_vecinos.index(min(distancias_vecinos))
-            min_distancia = lista_de_vecinos[index_min_distancia]
-            self.sig_pos = min_distancia.pos
+            self.dirigirse(self.recorrido[0], lista_de_vecinos)
 
         # while True:
         #     #Checa si la siguiente posicion es un mueble para poderse mover
@@ -113,19 +130,19 @@ class RobotLimpieza(Agent):
 
         ontops = self.model.grid.get_cell_list_contents([self.pos])
 
-        vecinos = self.model.grid.get_neighbors(
+        lista_de_vecinos = self.model.grid.get_neighbors(
             self.pos, moore=True, include_center=False)
 
-        for vecino in vecinos:
-            if isinstance(vecino, (Mueble, RobotLimpieza, EstacionDeCarga)) and vecino in RobotLimpieza.celdas_limpias:
-                vecinos.remove(vecino)
+        # for vecino in lista_de_vecinos:
+        #     if isinstance(vecino, (Mueble, RobotLimpieza, EstacionDeCarga)) and vecino in RobotLimpieza.celdas_limpias:
+        #         lista_de_vecinos.pop(lista_de_vecinos.index(vecino))
         
-        find_nearest = self.find_nearest(Celda)
+        # find_nearest = self.find_nearest(Celda)
 
-        celdas_sucias = self.buscar_celdas_sucia(vecinos)
+        celdas_sucias = self.buscar_celdas_sucia(lista_de_vecinos)
 
         if len(celdas_sucias) == 0:
-            self.seleccionar_nueva_pos(vecinos)
+            self.seleccionar_nueva_pos(lista_de_vecinos)
         else:
             self.limpiar_una_celda(celdas_sucias)
         #AGB Se carga cada step 25 y no se mueve hasta llegar a 100 de carga y no se pasa de 100
