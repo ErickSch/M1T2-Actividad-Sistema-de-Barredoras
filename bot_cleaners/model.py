@@ -12,7 +12,6 @@ class Celda(Agent):
         super().__init__(unique_id, model)
         self.sucia = suciedad
 
-
 class Mueble(Agent):
     def __init__(self, unique_id, model):
         super().__init__(unique_id, model)
@@ -86,8 +85,8 @@ class RobotLimpieza(Agent):
         return celdas_sucias
 
     def step(self):
-        # if self.carga < 30:
-        #     self.move_nearest_station()
+
+        ontops = self.model.grid.get_cell_list_contents([self.pos])
 
         vecinos = self.model.grid.get_neighbors(
             self.pos, moore=True, include_center=False)
@@ -95,6 +94,8 @@ class RobotLimpieza(Agent):
         for vecino in vecinos:
             if isinstance(vecino, (Mueble, RobotLimpieza, EstacionDeCarga)) and vecino in RobotLimpieza.celdas_limpias:
                 vecinos.remove(vecino)
+        
+        find_nearest = self.find_nearest(Celda)
 
         celdas_sucias = self.buscar_celdas_sucia(vecinos)
 
@@ -102,6 +103,14 @@ class RobotLimpieza(Agent):
             self.seleccionar_nueva_pos(vecinos)
         else:
             self.limpiar_una_celda(celdas_sucias)
+        #AGB Se carga cada step 25 y no se mueve hasta llegar a 100 de carga y no se pasa de 100
+        if isinstance(ontops[0], EstacionDeCarga):
+            self.carga += 25
+            if self.carga < 100:
+                self.sig_pos = self.pos
+            if self.carga > 100:
+                self.carga = 100
+
 
     def advance(self):
         if self.pos != self.sig_pos:
@@ -131,11 +140,29 @@ class Habitacion(Model):
         posiciones_disponibles = [pos for _, pos in self.grid.coord_iter()]
         
         # Posicionamiento de estaciones de carga
-        posiciones_estaciones_carga = [(1, 1), (1, M-2), (N-2, 1), (M-2, N-2)]
+        #Cuadrnte 1
+        # (M//4, N//4) = (5, 5)
+
+        #Cuadrante 2
+        # (M//4, N*3//4) = (5, 15)
+
+        #Cuadrante 3
+        # (M*3//4, N//4) = (15, 5)
+
+        #Cuadrante 4
+        # (M*3//4, N*3//4) = (15, 15)
+
+
+        posiciones_estaciones_carga = [(M//4, N//4),
+                                       (M//4, N*3//4),
+                                       (M*3//4, N//4),
+                                       (M*3//4, N*3//4)]
         for id, pos in enumerate(posiciones_estaciones_carga):
             estacion = EstacionDeCarga(id+1, self)
             self.grid.place_agent(estacion, pos)
             posiciones_disponibles.remove(pos)
+            #Fix the problem
+            # 
 
         # Posicionamiento de muebles
         num_muebles = int(M * N * porc_muebles)
