@@ -40,7 +40,7 @@ class RobotLimpieza(Agent):
         self.movimientos = list()
         self.carga = 100
         self.recorrido = recorrido
-        # print(recorrido)
+        print(recorrido)
         
     #AGB sin probar
     def find_nearest(self, agent_type):
@@ -211,11 +211,19 @@ class Habitacion(Model):
         else:  # 'Fija'
             pos_inicial_robots = [(1, 1)] * num_agentes
 
+
         for id in range(num_agentes):
+            reverse_count = False
             recorrido = []
             for i in range(M//num_agentes*id, M//num_agentes*id + M//num_agentes):
-                for n in range(M):
-                    recorrido.append((i, n))
+                if reverse_count == False:
+                    for n in range(M):
+                        recorrido.append((i, n))
+                    reverse_count = True
+                else:
+                    for n in reversed(range(M)):
+                        recorrido.append((i, n))
+                    reverse_count = False
             robot = RobotLimpieza(id, self, mueblesPos, recorrido)
             self.grid.place_agent(robot, pos_inicial_robots[id])
             self.schedule.add(robot)
