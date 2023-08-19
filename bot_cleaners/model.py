@@ -5,6 +5,7 @@ from mesa.time import SimultaneousActivation
 from mesa.datacollection import DataCollector
 
 import numpy as np
+import math
 
 
 class Celda(Agent):
@@ -31,14 +32,15 @@ class EstacionDeCarga(Agent):
                 agent.carga = 100
 
 class RobotLimpieza(Agent):
-    def __init__(self, unique_id, model, mueblesPos, limite_y):
+    celdas_limpias = []
+    def __init__(self, unique_id, model, mueblesPos, recorrido):
         super().__init__(unique_id, model)
         self.mueblesPos = mueblesPos
         self.sig_pos = None
         self.movimientos = list()
         self.carga = 100
-        self.limite_y = limite_y
-        print(limite_y)
+        self.recorrido = recorrido
+        # print(recorrido)
         
     #AGB sin probar
     def find_nearest(self, agent_type):
@@ -56,12 +58,30 @@ class RobotLimpieza(Agent):
         # print(RobotLimpieza.celdas_limpias)
 
     def seleccionar_nueva_pos(self, lista_de_vecinos):
-        while True:
-            #Checa si la siguiente posicion es un mueble para poderse mover
-            #sin checar
-            self.sig_pos = self.random.choice(lista_de_vecinos).pos
-            if self.sig_pos not in self.mueblesPos:
-                break
+        if self.pos == self.recorrido[0]:
+            self.recorrido.pop(0)
+            self.sig_pos = self.recorrido[0]
+        else:
+            distancias_vecinos = []
+            for i in lista_de_vecinos:
+                distancias_vecinos.append(self.get_distance(self.recorrido[0], i.pos))
+                
+            index_min_distancia = distancias_vecinos.index(min(distancias_vecinos))
+            min_distancia = lista_de_vecinos[index_min_distancia]
+            self.sig_pos = min_distancia.pos
+
+        # while True:
+        #     #Checa si la siguiente posicion es un mueble para poderse mover
+        #     #sin checar
+        #     self.sig_pos = self.random.choice(lista_de_vecinos).pos
+        #     if self.sig_pos not in self.mueblesPos:
+        #         break
+
+    def get_distance(self, p1, p2):
+        term_x = (p2[0] - p1[0])**2
+        term_y = (p2[1] - p1[1])**2
+        distance = math.sqrt(term_x + term_y)
+        return distance
 
     # def get_nearest_station(self, pos):
     #     posiciones_estaciones_carga = [(1, 1), (1, self.model.M-2), (N-2, 1), (M-2, N-2)]
@@ -136,7 +156,6 @@ class Habitacion(Model):
         self.grid = MultiGrid(M, N, False)
         self.schedule = SimultaneousActivation(self)
 
-        posiciones_limpias = []
         posiciones_disponibles = [pos for _, pos in self.grid.coord_iter()]
         
         # Posicionamiento de estaciones de carga
@@ -193,7 +212,11 @@ class Habitacion(Model):
             pos_inicial_robots = [(1, 1)] * num_agentes
 
         for id in range(num_agentes):
-            robot = RobotLimpieza(id, self, mueblesPos, (M/self.num_agentes) * id)
+            recorrido = []
+            for i in range(M//num_agentes*id, M//num_agentes*id + M//num_agentes):
+                for n in range(M):
+                    recorrido.append((i, n))
+            robot = RobotLimpieza(id, self, mueblesPos, recorrido)
             self.grid.place_agent(robot, pos_inicial_robots[id])
             self.schedule.add(robot)
 
@@ -261,20 +284,3 @@ def get_movimientos(agent: Agent) -> dict:
         # self.sucia = suciedad
 
 
-class Mueble(Agent):
-    def __init__(self, unique_id, model):
-        super().__init__(unique_id, model)
-
-class EstacionDeCarga(Agent):
-    def __init__(self, unique_id, model):
-        super().__init__(unique_id, model)
-        self.ocupada = False
-
-        #AGB sin probar
-    def recargar(self):
-        self.ocupada = True
-        self.enCarga = self.model.grid.get_cell_list_contents([self.pos])
-        for agent in self.enCarga:
-            
-            if isinstance(agent, RobotLimpieza):
-                agent.carga = 100
