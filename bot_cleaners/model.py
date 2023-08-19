@@ -30,7 +30,11 @@ class EstacionDeCarga(Agent):
             
             if isinstance(agent, RobotLimpieza):
                 agent.carga = 100
-
+# Que los robots que pasen muy cerca de estaciones se pongan a cargar sin importar su carga
+# Si se está cargando, agregar su recorrido a la lista de otro robot cercano (contrato)
+    # y si se termina de cargar antes, seguir con su recorrido e ir borrando las celdas
+    # del recorrido del otro
+# Funcionalidad de sacarle la vuelta a muebles.
 class RobotLimpieza(Agent):
     celdas_limpias = []
     def __init__(self, unique_id, model, mueblesPos, recorrido):
@@ -40,7 +44,7 @@ class RobotLimpieza(Agent):
         self.movimientos = list()
         self.carga = 100
         self.recorrido = recorrido
-        print(recorrido)
+        # print(recorrido)
         
     #AGB sin probar
     def find_nearest(self, agent_type):
@@ -51,6 +55,7 @@ class RobotLimpieza(Agent):
         return None    
 
     def limpiar_una_celda(self, lista_de_celdas_sucias):
+        
         celda_a_limpiar = self.random.choice(lista_de_celdas_sucias)
         celda_a_limpiar.sucia = False
         self.sig_pos = celda_a_limpiar.pos
@@ -215,7 +220,8 @@ class Habitacion(Model):
         for id in range(num_agentes):
             reverse_count = False
             recorrido = []
-            for i in range(M//num_agentes*id, M//num_agentes*id + M//num_agentes):
+            # Crear un recorrido para cada robot dividido en zonas en base al numero de robots
+            for i in range(M//num_agentes*id, M//num_agentes*id + M//num_agentes-2):
                 if reverse_count == False:
                     for n in range(M):
                         recorrido.append((i, n))
