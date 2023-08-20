@@ -24,7 +24,7 @@ class EstacionDeCarga(Agent):
         self.ocupada = False
         if len(EstacionDeCarga.posiciones) <= unique_id:
             EstacionDeCarga.posiciones.append(self.pos)
-        print(EstacionDeCarga.posiciones)
+        # print(EstacionDeCarga.posiciones)
 
         #AGB sin probar
     def recargar(self):
@@ -43,7 +43,7 @@ class RobotLimpieza(Agent):
 
     celdas_limpias = []
     busca_contrato = -1
-    trabajo = []
+    contratos = []
     contratado = -1
 
     def __init__(self, unique_id, model, mueblesPos, recorrido):
@@ -53,6 +53,8 @@ class RobotLimpieza(Agent):
         self.movimientos = list()
         self.carga = 100
         self.recorrido = recorrido
+        self.estacion_de_carga = None
+
         # print(recorrido)
         
     #AGB sin probar
@@ -69,6 +71,10 @@ class RobotLimpieza(Agent):
         # Otros -> Aceptar los que esten cerca
         # Tu -> Agarrar al mas cercano
         # 
+    
+    def get_agente_from_pos(self, pos):
+        agente = self.model.grid.get_cell_list_contents([pos])[0]
+        return agente
 
     def limpiar_una_celda(self, lista_de_celdas_sucias):
         
@@ -78,37 +84,73 @@ class RobotLimpieza(Agent):
         RobotLimpieza.celdas_limpias.append(celda_a_limpiar.pos)
         # print(RobotLimpieza.celdas_limpias)
 
+    # tiene menos de 30 cargar
+    # si no tiene coordenada en cargar: calcularla y ponerla
+    # Si tiene coordenada en cargar: dirigirse a esa coordenada
+    # si la coordenada actual es la misma que la estacion y la pila es 100 quitar el valor de estacion de carga
+
     def cargar(self):
-        distancias_carga = []
-        posiciones = Habitacion.pos_estaciones_carga(self.model)
-        for i in posiciones:
-            self.get_distance(self.pos, i)
-        min_index = distancias_carga.index(min(distancias_carga))
-        self.recorrido.append(posiciones[min_index])
+        print(f'CARGAR:  {self.unique_id}-------')
+        # siguiente_celda = self.model.grid.get_cell_list_contents([self.recorrido[0]])
+        if self.estacion_de_carga == None:
+            distancias_carga = []
+            posiciones = Habitacion.pos_estaciones_carga(self.model)
+            for i in posiciones:
+                distancias_carga.append(self.get_distance(self.pos, i))
+            min_index = distancias_carga.index(min(distancias_carga))
+            self.estacion_de_carga = posiciones[min_index]
+        elif self.pos == self.estacion_de_carga:
+            self.carga += 25
+            if self.carga < 100:
+                self.sig_pos = self.pos
+            if self.carga > 100:
+                self.carga = 100
+        elif self.pos == self.estacion_de_carga and self.carga == 100:
+            self.estacion_de_carga = None
+        elif self.estacion_de_carga:
+            lista_de_vecinos = self.model.grid.get_neighbors(
+                self.pos, moore=True, include_center=False)
+            self.dirigirse(self.estacion_de_carga, lista_de_vecinos)
 
     def dirigirse(self, pos_final, lista_de_vecinos):
+        # print(f'El robot {self.unique_id} esta en {self.pos} y se dirige a {pos_final}')
         distancias_vecinos = []
         for i in range(len(lista_de_vecinos)):
             # Que no sea mueble ni este en celdas limpias
-            if isinstance(lista_de_vecinos[i], Mueble) != True and lista_de_vecinos[i].pos not in self.movimientos:
-                distancias_vecinos.append((i, self.get_distance(lista_de_vecinos[i].pos, pos_final)))
-            if len(distancias_vecinos) == 0:
-                if isinstance(lista_de_vecinos[i], Mueble) != True:
-                    distancias_vecinos.append((i, self.get_distance(lista_de_vecinos[i].pos, pos_final)))
+            agente_vecino = self.get_agente_from_pos(lista_de_vecinos[i].pos)
+            if isinstance(agente_vecino, Mueble) != True and lista_de_vecinos[i].pos in self.movimientos:
+                distancia = round(self.get_distance(agente_vecino.pos, pos_final), 3)
+                distancias_vecinos.append((i, distancia))
+        
+        for i in range(len(lista_de_vecinos)):
+            # Que no sea mueble ni este en celdas limpias
+            agente_vecino = self.get_agente_from_pos(lista_de_vecinos[i].pos)
+            if isinstance(agente_vecino, Mueble) != True:
+                distancia = round(self.get_distance(agente_vecino.pos, pos_final), 3)
+                distancias_vecinos.append((i, distancia))
 
-        print(f'Agente: {self.unique_id}\nDistancias: {distancias_vecinos}')
+        # if isinstance(agente_vecino, Mueble) != True:
+        #     distancia = round(self.get_distance(agente_vecino.pos, pos_final), 3)
+        #     distancias_vecinos.append((i, distancia))
+
         index_min_distancia = min(distancias_vecinos, key=lambda x: x[1])[0]
         min_distancia = lista_de_vecinos[index_min_distancia]
         self.sig_pos = min_distancia.pos
+        if self.unique_id == 1:
+
+            print(f'\nEl robot {self.unique_id} esta en {self.pos} y se mueve a {self.sig_pos} porque es la mas cercana a {pos_final} con las distancias {distancias_vecinos} de los puntos {[i.pos for i in lista_de_vecinos]}')
  
-        
 
     def seleccionar_nueva_pos(self, lista_de_vecinos):
+        # print("Seleccionando nueva pos")
+        # print(f'Posicion: {self.pos}')
         if len(self.recorrido) == 0:
             self.cargar()
         elif self.pos == self.recorrido[0]:
             self.recorrido.pop(0)
-            while(isinstance(self.recorrido[0], Mueble)):
+            
+            while(isinstance(self.get_agente_from_pos(self.recorrido[0]), Mueble)):
+                print("Esta es mueble")
                 self.recorrido.pop(0)
 
         self.dirigirse(self.recorrido[0], lista_de_vecinos)
@@ -151,20 +193,34 @@ class RobotLimpieza(Agent):
 
     def step(self):
 
-        celda_act = self.model.grid.get_cell_list_contents([self.pos])
+        # celda_actual = self.model.grid.get_cell_list_contents([self.pos])
 
         lista_de_vecinos = self.model.grid.get_neighbors(
             self.pos, moore=True, include_center=False)
         
         #AGB Se carga cada step 25 y no se mueve hasta llegar a 100 de carga y no se pasa de 100
-        if isinstance(celda_act[0], EstacionDeCarga):
-            self.carga += 25
-            if self.carga < 100:
-                self.sig_pos = self.pos
-            if self.carga > 100:
-                self.carga = 100
-                self.seleccionar_nueva_pos(lista_de_vecinos)
+
+        # elif RobotLimpieza.busca_contrato == self.unique_id:
+        #     # Encontrar el mayor contrato
+        #     lens_contratos = [len(i) for i in RobotLimpieza.contratos]
+        #     index_mayor_contrato = max(lens_contratos)
+        #     contrato = RobotLimpieza.contratos[index_mayor_contrato]
+
+        #     #Agregar mitad de contrato a tu recorrido
+        #     self.recorrido.extend(contrato[len(contrato)/2::])
+        #     #Quitar esa parte del otro agente
+
+        #     # print(f'Contrato: {contrato}\nExtend part: {self.recorrido}')
+        
+        # elif RobotLimpieza.busca_contrato != -1:
+        #     RobotLimpieza.contratos.append(self.recorrido)
+
+        # elif len(self.recorrido) == 0 and RobotLimpieza.busca_contrato == -1:
+        #     RobotLimpieza.busca_contrato = self.unique_id
+        if self.estacion_de_carga:
+            self.cargar()
         else: 
+            # print(self.recorrido)
 
             # for vecino in lista_de_vecinos:
             #     if isinstance(vecino, (Mueble, RobotLimpieza, EstacionDeCarga)) and vecino in RobotLimpieza.celdas_limpias:
@@ -178,20 +234,22 @@ class RobotLimpieza(Agent):
                 if self.carga < 30:
                     self.cargar()
                 else:
+
                     self.seleccionar_nueva_pos(lista_de_vecinos)
             else:
                 self.limpiar_una_celda(celdas_sucias)
+                # self.seleccionar_nueva_pos(lista_de_vecinos)
 
 
 
     def advance(self):
+        # print(f'Id: {self.unique_id}\nAct_pos: {self.pos}\nSig_pos: {self.sig_pos}\nRecorrido[0]: {self.recorrido[0]}')
         if self.pos != self.sig_pos:
             self.movimientos.append(self.sig_pos)
             
         if self.carga > 0:
             self.carga -= 1
             self.model.grid.move_agent(self, self.sig_pos)
-
 
 class Habitacion(Model):
     def __init__(self, M: int, N: int,
