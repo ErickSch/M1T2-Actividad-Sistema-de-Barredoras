@@ -74,20 +74,24 @@ class RobotLimpieza(Agent):
         if self.estacion_de_carga == None:
             distancias_carga = []
             posiciones = Habitacion.pos_estaciones_carga(self.model)
+            estaciones = []
             for i in posiciones:
                 estacion_carga = self.model.grid.get_cell_list_contents([i])[0]
+                estaciones.append(estacion_carga)
+                distancia = self.get_distance(self.pos, i)
                 if estacion_carga.ocupada == True:
-                    distancias_carga.append(1000)
+                    distancias_carga.append(distancia*1000)
                 else:
-                    distancias_carga.append(self.get_distance(self.pos, i))
+                    distancias_carga.append(distancia)
+                
             if len(distancias_carga) == 0:
                 return 0
             else:
                 min_index = distancias_carga.index(min(distancias_carga))
                 self.estacion_de_carga = posiciones[min_index]
+                estaciones[min_index].ocupada = True
         elif self.pos == self.estacion_de_carga:
             estacion_carga = self.model.grid.get_cell_list_contents([self.estacion_de_carga])[0]
-            estacion_carga.ocupada = True
             self.carga += 25
             if self.carga < 100:
                 self.sig_pos = self.pos
@@ -110,14 +114,14 @@ class RobotLimpieza(Agent):
             # Que no sea mueble ni este en celdas limpias
             agente_vecino = self.get_agente_from_pos(lista_de_vecinos[i].pos)
 
-            if isinstance(agente_vecino, Mueble) != True and lista_de_vecinos[i].pos in self.movimientos_recorrido:
+            if isinstance(agente_vecino, Mueble) != True and isinstance(agente_vecino, RobotLimpieza) != True and lista_de_vecinos[i].pos in self.movimientos_recorrido:
                 distancia = round(self.get_distance(agente_vecino.pos, pos_final), 3)
                 distancias_vecinos.append((i, distancia))
 
         for i in range(len(lista_de_vecinos)):
             # Que no sea mueble ni este en celdas limpias
             agente_vecino = self.get_agente_from_pos(lista_de_vecinos[i].pos)
-            if isinstance(agente_vecino, Mueble) != True:
+            if isinstance(agente_vecino, Mueble) != True and isinstance(agente_vecino, RobotLimpieza) != True:
                 distancia = round(self.get_distance(agente_vecino.pos, pos_final), 3)
                 distancias_vecinos.append((i, distancia))
 
@@ -127,7 +131,7 @@ class RobotLimpieza(Agent):
         self.sig_pos = min_distancia.pos
         
         if len(self.movimientos) > 1:
-            if self.sig_pos == self.movimientos[-1]:
+            if self.sig_pos in self.movimientos[-2::]:
                 print("sacamos una pos")
                 if len(self.recorrido) > 0:
                     self.recorrido.pop(0)
@@ -205,11 +209,7 @@ class RobotLimpieza(Agent):
         elif RobotLimpieza.busca_contrato != -1 and len(self.recorrido) > 2:
             RobotLimpieza.contratos.append((self.unique_id, self.recorrido))
 
-            print("RobotLimpieza")
-            print(RobotLimpieza.contratos)
-
         elif len(self.recorrido) == 0 and RobotLimpieza.busca_contrato == -1:
-            print("Busca contrato")
             RobotLimpieza.busca_contrato = self.unique_id
         elif self.estacion_de_carga != None:
             self.cargar()
@@ -238,6 +238,7 @@ class RobotLimpieza(Agent):
             self.model.grid.move_agent(self, self.sig_pos)
         elif self.carga > 0:
             self.carga -= 1
+            Habitacion.agregar_uso_energia(self.model)
             self.model.grid.move_agent(self, self.sig_pos)
 
 class Habitacion(Model):
@@ -255,6 +256,7 @@ class Habitacion(Model):
         self.porc_muebles = porc_muebles
         self.recargas = 0
         self.movimientos_totales = 0
+        self.uso_energia = 0
 
         self.grid = MultiGrid(M, N, False)
         self.schedule = SimultaneousActivation(self)
@@ -356,6 +358,9 @@ class Habitacion(Model):
     def agregar_recarga(self):
         self.recargas += 1
     
+    def agregar_uso_energia(self):
+        self.uso_energia += 1
+
     def agregar_movimiento(self):
         self.movimientos_totales += 1
 
@@ -369,7 +374,9 @@ class Habitacion(Model):
         print(f'''
     Tiempo de lipieza: {tiempo_limpieza}
     Movimientos_realizados: {movimientos_realizados}
+    Energia utilizada: {self.uso_energia}
     Cantidad de recargas: {recargas}
+    Se usó {round(self.uso_energia/recargas, 2)}% de carga por cada recarga.
     ''')
 
     def todoLimpio(self):
