@@ -4,8 +4,13 @@ from mesa.space import MultiGrid
 from mesa.time import SimultaneousActivation
 from mesa.datacollection import DataCollector
 
+import matplotlib.pyplot as plt
+import matplotlib as mlp
+
 import numpy as np
 import math
+import time
+import datetime
 
 
 class Celda(Agent):
@@ -17,6 +22,7 @@ class Mueble(Agent):
     def __init__(self, unique_id, model):
         super().__init__(unique_id, model)
 
+# Clase de agente estación de carga
 class EstacionDeCarga(Agent):
     posiciones = []
     def __init__(self, unique_id, model):
@@ -24,16 +30,11 @@ class EstacionDeCarga(Agent):
         self.ocupada = False
         if len(EstacionDeCarga.posiciones) <= unique_id:
             EstacionDeCarga.posiciones.append(self.pos)
-        # print(EstacionDeCarga.posiciones)
 
-        #AGB sin probar
-    def recargar(self):
-        self.ocupada = True
-        self.enCarga = self.model.grid.get_cell_list_contents([self.pos])
             
-        if isinstance(self.enCarga, RobotLimpieza):
-            self.enCarga.carga = 100
-            self.ocupada = False
+        # if isinstance(self.enCarga, RobotLimpieza):
+        #     self.enCarga.carga = 100
+        #     self.ocupada = False
 
 class RobotLimpieza(Agent):
 
@@ -93,6 +94,7 @@ class RobotLimpieza(Agent):
             if self.carga > 100:
                 self.carga = 100
                 self.estacion_de_carga = None
+                Habitacion.agregar_recarga(self.model)
         elif self.pos == self.estacion_de_carga and self.carga > 90:
             self.estacion_de_carga = None
             estacion_carga = self.model.grid.get_cell_list_contents([self.estacion_de_carga])[0]
@@ -230,6 +232,7 @@ class RobotLimpieza(Agent):
     def advance(self):
         if self.pos != self.sig_pos:    
             self.movimientos.append(self.sig_pos)
+            Habitacion.agregar_movimiento(self.model)
         if self.prendido == False:
             self.sig_pos = self.pos
             self.model.grid.move_agent(self, self.sig_pos)
@@ -245,9 +248,13 @@ class Habitacion(Model):
                  modo_pos_inicial: str = 'Fija',
                  ):
 
+        self.tiempo_inicial = time.time()
+        self.tiempo_final = 0
         self.num_agentes = num_agentes
         self.porc_celdas_sucias = porc_celdas_sucias
         self.porc_muebles = porc_muebles
+        self.recargas = 0
+        self.movimientos_totales = 0
 
         self.grid = MultiGrid(M, N, False)
         self.schedule = SimultaneousActivation(self)
@@ -284,6 +291,12 @@ class Habitacion(Model):
         posiciones_muebles = self.random.sample(posiciones_disponibles, k=num_muebles)
         
         mueblesPos = posiciones_muebles.copy()
+
+        # self.datacollector = DataCollector(
+        #       model_reporters={"Tiempo_limpieza": self.get_grid,
+        #                       "Movimientos_realizados": self.get_on_fire,
+        #                        "Recargas": self.get_burned}
+        #   )
 
         for id, pos in enumerate(posiciones_muebles):
             # print(pos)
@@ -331,12 +344,33 @@ class Habitacion(Model):
         )
 
     def step(self):
-        self.datacollector.collect(self)
+        if get_sucias(self) != 0:
+            self.datacollector.collect(self)
 
-        self.schedule.step()
+            self.schedule.step()
+        else:
+            if self.tiempo_final == 0:
+                self.tiempo_final = time.time()
+            self.resultados()
+
+    def agregar_recarga(self):
+        self.recargas += 1
+    
+    def agregar_movimiento(self):
+        self.movimientos_totales += 1
 
     def pos_estaciones_carga(self):
         return self.posiciones_estaciones_carga
+    
+    def resultados(self):
+        tiempo_limpieza = str(datetime.timedelta(seconds=(self.tiempo_final - self.tiempo_inicial)))
+        movimientos_realizados = self.movimientos_totales
+        recargas = self.recargas
+        print(f'''
+    Tiempo de lipieza: {tiempo_limpieza}
+    Movimientos_realizados: {movimientos_realizados}
+    Cantidad de recargas: {recargas}
+    ''')
 
     def todoLimpio(self):
         for (content, x, y) in self.grid.coord_iter():
@@ -344,6 +378,10 @@ class Habitacion(Model):
                 if isinstance(obj, Celda) and obj.sucia:
                     return False
         return True
+    
+
+
+ 
 
 
 def get_grid(model: Model) -> np.ndarray:
@@ -390,5 +428,8 @@ def get_movimientos(agent: Agent) -> dict:
     #    return 0(self, unique_id, model, suciedad: bool = False):
         # super().__init__(unique_id, model)
         # self.sucia = suciedad
+
+# def graficar():
+#     pass
 
 
