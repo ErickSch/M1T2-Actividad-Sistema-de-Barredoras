@@ -7,4 +7,6 @@ pairs_m_10 = filter(lambda x: x[1] <= 10, pairs)
 
 min_val = min(pairs, key=lambda t: t[1])
 # print(min_val)
+
+print(pairs[-2::])
  

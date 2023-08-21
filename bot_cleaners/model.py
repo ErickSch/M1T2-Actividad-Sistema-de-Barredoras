@@ -41,6 +41,7 @@ class EstacionDeCarga(Agent):
 # Funcionalidad de sacarle la vuelta a muebles.
 class RobotLimpieza(Agent):
 
+    funcionando = []
     celdas_limpias = []
     busca_contrato = -1
     contratos = []
@@ -48,12 +49,15 @@ class RobotLimpieza(Agent):
 
     def __init__(self, unique_id, model, mueblesPos, recorrido):
         super().__init__(unique_id, model)
+        self.prendido = True
         self.mueblesPos = mueblesPos
         self.sig_pos = None
         self.movimientos = list()
+        self.movimientos_recorrido = list()
         self.carga = 100
         self.recorrido = recorrido
         self.estacion_de_carga = None
+        RobotLimpieza.funcionando.append(self.unique_id)
 
         # print(recorrido)
         
@@ -102,8 +106,11 @@ class RobotLimpieza(Agent):
                     distancias_carga.append(1000)
                 else:
                     distancias_carga.append(self.get_distance(self.pos, i))
-            min_index = distancias_carga.index(min(distancias_carga))
-            self.estacion_de_carga = posiciones[min_index]
+            if len(distancias_carga) == 0:
+                return 0
+            else:
+                min_index = distancias_carga.index(min(distancias_carga))
+                self.estacion_de_carga = posiciones[min_index]
         elif self.pos == self.estacion_de_carga:
             estacion_carga = self.model.grid.get_cell_list_contents([self.estacion_de_carga])[0]
             estacion_carga.ocupada = True
@@ -129,7 +136,7 @@ class RobotLimpieza(Agent):
             # Que no sea mueble ni este en celdas limpias
             agente_vecino = self.get_agente_from_pos(lista_de_vecinos[i].pos)
 
-            if isinstance(agente_vecino, Mueble) != True and lista_de_vecinos[i].pos in self.movimientos:
+            if isinstance(agente_vecino, Mueble) != True and lista_de_vecinos[i].pos in self.movimientos_recorrido:
                 distancia = round(self.get_distance(agente_vecino.pos, pos_final), 3)
                 distancias_vecinos.append((i, distancia))
 
@@ -148,27 +155,36 @@ class RobotLimpieza(Agent):
         index_min_distancia = min(distancias_vecinos, key=lambda x: x[1])[0]
         min_distancia = lista_de_vecinos[index_min_distancia]
         self.sig_pos = min_distancia.pos
+        
+        if len(self.movimientos) > 1:
+            if self.sig_pos == self.movimientos[-1]:
+                print("sacamos una pos")
+                if len(self.recorrido) > 0:
+                    self.recorrido.pop(0)
+                
         # if self.unique_id == 1:
 
             # print(f'\nEl robot {self.unique_id} esta en {self.pos} y se mueve a {self.sig_pos} porque es la mas cercana a {pos_final} con las distancias {distancias_vecinos} de los puntos {[i.pos for i in lista_de_vecinos]}')
  
 
     def seleccionar_nueva_pos(self, lista_de_vecinos):
+        print(self.recorrido)
         # print("Seleccionando nueva pos")
-        if self.pos == self.recorrido[0]:
-            self.movimientos.append(self.recorrido[0])
-            self.recorrido.pop(0)
-            for i in lista_de_vecinos:
-                if isinstance(i, EstacionDeCarga) and self.carga < 80:
-                    self.cargar()
-            if len(self.recorrido) > 0:
-                while(isinstance(self.get_agente_from_pos(self.recorrido[0]), Mueble)):
-                    self.recorrido.pop(0)
-                    if(len(self.recorrido) == 0):
-                        break
-            
         if len(self.recorrido) > 0:
-            self.dirigirse(self.recorrido[0], lista_de_vecinos)
+            if self.pos == self.recorrido[0]:
+                self.movimientos_recorrido.append(self.recorrido[0])
+                self.recorrido.pop(0)
+                for i in lista_de_vecinos:
+                    if isinstance(i, EstacionDeCarga) and self.carga < 80:
+                        self.cargar()
+                if len(self.recorrido) > 0:
+                    while(isinstance(self.get_agente_from_pos(self.recorrido[0]), Mueble)):
+                        self.recorrido.pop(0)
+                        if(len(self.recorrido) == 0):
+                            break
+                
+            if len(self.recorrido) > 0:
+                self.dirigirse(self.recorrido[0], lista_de_vecinos)
 
         # while True:
         #     #Checa si la siguiente posicion es un mueble para poderse mover
@@ -218,23 +234,27 @@ class RobotLimpieza(Agent):
 
         if RobotLimpieza.busca_contrato == self.unique_id:
             # Encontrar el mayor contrato
-            lens_contratos = [len(i[1]) for i in RobotLimpieza.contratos]
-            index_mayor_contrato = lens_contratos.index(max(lens_contratos))
-            contrato = RobotLimpieza.contratos[index_mayor_contrato][1]
-            RobotLimpieza.contratado = RobotLimpieza.contratos[index_mayor_contrato][0]
+            if len(RobotLimpieza.contratos) > 0:
+                lens_contratos = [len(i[1]) for i in RobotLimpieza.contratos]
+                index_mayor_contrato = lens_contratos.index(max(lens_contratos))
+                contrato = RobotLimpieza.contratos[index_mayor_contrato][1]
+                RobotLimpieza.contratado = RobotLimpieza.contratos[index_mayor_contrato][0]
 
-            #Agregar mitad de contrato a tu recorrido
-            self.recorrido.extend(contrato[len(contrato)//2::])
-            print(f'Contrato: {contrato}\nExtend part: {self.recorrido}')
-            RobotLimpieza.contratos = []
-            RobotLimpieza.busca_contrato = -1
+                #Agregar mitad de contrato a tu recorrido
+                self.recorrido.extend(contrato[len(contrato)//2::])
+                print(f'Contrato: {contrato}\nExtend part: {self.recorrido}')
+                RobotLimpieza.contratos = []
+                RobotLimpieza.busca_contrato = -1
             
             #Quitar esa parte del otro agente
+        elif RobotLimpieza.busca_contrato == self.unique_id and len(RobotLimpieza.contratos) == 0:
+            self.prendido = False
         elif RobotLimpieza.contratado == self.unique_id:
-            self.recorrido = self.recorrido[::len(self.recorrido)//2]
+            if len(self.recorrido) > 2:
+                self.recorrido = self.recorrido[::len(self.recorrido)//2]
             RobotLimpieza.contratado = -1
         # Subir contrato
-        elif RobotLimpieza.busca_contrato != -1:
+        elif RobotLimpieza.busca_contrato != -1 and len(self.recorrido) > 2:
             RobotLimpieza.contratos.append((self.unique_id, self.recorrido))
 
             print("RobotLimpieza")
@@ -270,11 +290,12 @@ class RobotLimpieza(Agent):
 
     def advance(self):
         # print(f'Id: {self.unique_id}\nAct_pos: {self.pos}\nSig_pos: {self.sig_pos}\nRecorrido[0]: {self.recorrido[0]}')
-        # if self.pos != self.sig_pos:
-            
-            # self.movimientos.append(self.sig_pos)
-            
-        if self.carga > 0:
+        if self.pos != self.sig_pos:    
+            self.movimientos.append(self.sig_pos)
+        if self.prendido == False:
+            self.sig_pos = self.pos
+            self.model.grid.move_agent(self, self.sig_pos)
+        elif self.carga > 0:
             self.carga -= 1
             self.model.grid.move_agent(self, self.sig_pos)
 
@@ -353,7 +374,7 @@ class Habitacion(Model):
             reverse_count = False
             recorrido = []
             # Crear un recorrido para cada robot dividido en zonas en base al numero de robots
-            for i in range(M//num_agentes*id, M//num_agentes*id + M//num_agentes-2):
+            for i in range(M//num_agentes*id, M//num_agentes*id + M//num_agentes):
                 if reverse_count == False:
                     for n in range(M):
                         recorrido.append((i, n))
