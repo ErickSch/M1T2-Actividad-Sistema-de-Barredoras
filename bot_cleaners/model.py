@@ -34,11 +34,7 @@ class EstacionDeCarga(Agent):
         if isinstance(self.enCarga, RobotLimpieza):
             self.enCarga.carga = 100
             self.ocupada = False
-# Que los robots que pasen muy cerca de estaciones se pongan a cargar sin importar su carga
-# Si se está cargando, agregar su recorrido a la lista de otro robot cercano (contrato)
-    # y si se termina de cargar antes, seguir con su recorrido e ir borrando las celdas
-    # del recorrido del otro
-# Funcionalidad de sacarle la vuelta a muebles.
+
 class RobotLimpieza(Agent):
 
     funcionando = []
@@ -59,22 +55,7 @@ class RobotLimpieza(Agent):
         self.estacion_de_carga = None
         RobotLimpieza.funcionando.append(self.unique_id)
 
-        # print(recorrido)
-        
-    #AGB sin probar
-    def find_nearest(self, agent_type):
-        agent = self.model.grid.get_cell_list_contents([self.pos])
-        for agent in agent:
-            if isinstance(agent, agent_type):
-                return agent
-        return None 
 
-    # def carga_cercana(self):
-
-        # Tu -> Subir posicion
-        # Otros -> Aceptar los que esten cerca
-        # Tu -> Agarrar al mas cercano
-        # 
     
     def get_agente_from_pos(self, pos):
         agente = self.model.grid.get_cell_list_contents([pos])[0]
@@ -86,17 +67,9 @@ class RobotLimpieza(Agent):
         celda_a_limpiar.sucia = False
         self.sig_pos = celda_a_limpiar.pos
         RobotLimpieza.celdas_limpias.append(celda_a_limpiar.pos)
-        # print(RobotLimpieza.celdas_limpias)
-
-    # tiene menos de 30 cargar
-    # si no tiene coordenada en cargar: calcularla y ponerla
-    # Si tiene coordenada en cargar: dirigirse a esa coordenada
-    # si la coordenada actual es la misma que la estacion y la pila es 100 quitar el valor de estacion de carga
 
     def cargar(self):
-        print(f'CARGAR:  {self.unique_id}-------')
-        print(self.estacion_de_carga)
-        # siguiente_celda = self.model.grid.get_cell_list_contents([self.recorrido[0]])
+
         if self.estacion_de_carga == None:
             distancias_carga = []
             posiciones = Habitacion.pos_estaciones_carga(self.model)
@@ -130,7 +103,6 @@ class RobotLimpieza(Agent):
             self.dirigirse(self.estacion_de_carga, lista_de_vecinos)
 
     def dirigirse(self, pos_final, lista_de_vecinos):
-        # print(f'El robot {self.unique_id} esta en {self.pos} y se dirige a {pos_final}')
         distancias_vecinos = []
         for i in range(len(lista_de_vecinos)):
             # Que no sea mueble ni este en celdas limpias
@@ -140,7 +112,6 @@ class RobotLimpieza(Agent):
                 distancia = round(self.get_distance(agente_vecino.pos, pos_final), 3)
                 distancias_vecinos.append((i, distancia))
 
-        # if len(distancias_vecinos) == 0:
         for i in range(len(lista_de_vecinos)):
             # Que no sea mueble ni este en celdas limpias
             agente_vecino = self.get_agente_from_pos(lista_de_vecinos[i].pos)
@@ -148,9 +119,6 @@ class RobotLimpieza(Agent):
                 distancia = round(self.get_distance(agente_vecino.pos, pos_final), 3)
                 distancias_vecinos.append((i, distancia))
 
-        # if isinstance(agente_vecino, Mueble) != True:
-        #     distancia = round(self.get_distance(agente_vecino.pos, pos_final), 3)
-        #     distancias_vecinos.append((i, distancia))
 
         index_min_distancia = min(distancias_vecinos, key=lambda x: x[1])[0]
         min_distancia = lista_de_vecinos[index_min_distancia]
@@ -162,14 +130,8 @@ class RobotLimpieza(Agent):
                 if len(self.recorrido) > 0:
                     self.recorrido.pop(0)
                 
-        # if self.unique_id == 1:
-
-            # print(f'\nEl robot {self.unique_id} esta en {self.pos} y se mueve a {self.sig_pos} porque es la mas cercana a {pos_final} con las distancias {distancias_vecinos} de los puntos {[i.pos for i in lista_de_vecinos]}')
- 
-
     def seleccionar_nueva_pos(self, lista_de_vecinos):
-        print(self.recorrido)
-        # print("Seleccionando nueva pos")
+        # print(self.recorrido)
         if len(self.recorrido) > 0:
             if self.pos == self.recorrido[0]:
                 self.movimientos_recorrido.append(self.recorrido[0])
@@ -186,24 +148,11 @@ class RobotLimpieza(Agent):
             if len(self.recorrido) > 0:
                 self.dirigirse(self.recorrido[0], lista_de_vecinos)
 
-        # while True:
-        #     #Checa si la siguiente posicion es un mueble para poderse mover
-        #     #sin checar
-        #     self.sig_pos = self.random.choice(lista_de_vecinos).pos
-        #     if self.sig_pos not in self.mueblesPos:
-        #         break
-
     def get_distance(self, p1, p2):
         term_x = (p2[0] - p1[0])**2
         term_y = (p2[1] - p1[1])**2
         distance = math.sqrt(term_x + term_y)
         return distance
-
-    # def get_nearest_station(self, pos):
-    #     posiciones_estaciones_carga = [(1, 1), (1, self.model.M-2), (N-2, 1), (M-2, N-2)]
-    #     distances = []
-    #     for 
-
 
 
 
@@ -224,13 +173,10 @@ class RobotLimpieza(Agent):
 
     def step(self):
 
-        # celda_actual = self.model.grid.get_cell_list_contents([self.pos])
-
         lista_de_vecinos = self.model.grid.get_neighbors(
             self.pos, moore=True, include_center=False)
     
         
-        #AGB Se carga cada step 25 y no se mueve hasta llegar a 100 de carga y no se pasa de 100
 
         if RobotLimpieza.busca_contrato == self.unique_id:
             # Encontrar el mayor contrato
@@ -266,13 +212,6 @@ class RobotLimpieza(Agent):
         elif self.estacion_de_carga != None:
             self.cargar()
         else: 
-            # print(self.recorrido)
-
-            # for vecino in lista_de_vecinos:
-            #     if isinstance(vecino, (Mueble, RobotLimpieza, EstacionDeCarga)) and vecino in RobotLimpieza.celdas_limpias:
-            #         lista_de_vecinos.pop(lista_de_vecinos.index(vecino))
-            
-            # find_nearest = self.find_nearest(Celda)
 
             celdas_sucias = self.buscar_celdas_sucia(lista_de_vecinos)
 
@@ -289,7 +228,6 @@ class RobotLimpieza(Agent):
 
 
     def advance(self):
-        # print(f'Id: {self.unique_id}\nAct_pos: {self.pos}\nSig_pos: {self.sig_pos}\nRecorrido[0]: {self.recorrido[0]}')
         if self.pos != self.sig_pos:    
             self.movimientos.append(self.sig_pos)
         if self.prendido == False:
